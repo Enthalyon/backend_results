@@ -3,7 +3,9 @@ package com.misiontic.g1.securityBackend.services;
 import com.misiontic.g1.securityBackend.models.User;
 import com.misiontic.g1.securityBackend.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -32,11 +34,19 @@ public class UserServices {
         return this.userRepository.findById(id);
     }
 
+    public Optional<User>showByNickname(String nickname){
+        return this.userRepository.findByNickname(nickname);
+    }
+
     /**
      *
-     * @param newUser
+     * @param email
      * @return
      */
+
+    public Optional<User> showByEmail(String email){
+        return this.userRepository.findByEmail(email);
+    }
     public User create(User newUser){
         //Validate if id is present in json
         if(newUser.getId() == null) {
@@ -71,7 +81,7 @@ public class UserServices {
                 if(updatedUser.getNickname() != null)
                     tempUser.get().setNickname(updatedUser.getNickname());
                 if(updatedUser.getPassword() != null)
-                    tempUser.get().setPassword(updatedUser.getPassword());
+                    tempUser.get().setPassword(this.convertToSHA256(updatedUser.getPassword()));
                 return this.userRepository.save(tempUser.get());
             }
             else{
@@ -104,17 +114,20 @@ public class UserServices {
      * @return
      */
 
-    public HashMap<String, Boolean> login(User user){
-        String email = user.getEmail();
-        String password = this.convertToSHA256(user.getPassword());
-        Optional<User> result = this.userRepository.login(email, password);
-        //TODO improve
-        HashMap<String, Boolean> response = new HashMap();
-        if(result.isEmpty())
-            response.put("login", false);
+    public User login(User user){
+        User result = null;
+        if(user.getPassword() != null && user.getEmail() != null) {
+            String email = user.getEmail();
+            String password = this.convertToSHA256(user.getPassword());
+            Optional<User> tempUser = this.userRepository.login(email, password);
+            if (tempUser.isEmpty())
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid access");
+            else
+                result = tempUser.get();
+        }
         else
-            response.put("login", true);
-        return response;
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mandatory fields had not been send.");
+        return result;
     }
 
     /**

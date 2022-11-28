@@ -36,7 +36,7 @@ public class PermissionServices {
      */
 
     public Permission create(Permission newPermission){
-        if(newPermission.getId() != null) {
+        if(newPermission.getId() == null) {
             if (newPermission.getUrl() != null && newPermission.getMethod() != null)
                 return this.permissionRepository.save(newPermission);
             else {
